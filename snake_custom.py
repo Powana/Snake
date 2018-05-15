@@ -116,10 +116,13 @@ class Snake:
         :param direction:
         :return:
         """
+        # NN: todo: this made it worse
+        # Let the NN try to go into itself, it should die
         # There's probaby a better way to do this
-        not_allowed = {SOUTH: NORTH, NORTH: SOUTH, EAST: WEST, WEST: EAST}
-        if not_allowed[direction] != self.direction:
-            self.direction = direction
+        # not_allowed = {SOUTH: NORTH, NORTH: SOUTH, EAST: WEST, WEST: EAST}
+        # if not_allowed[direction] != self.direction:
+        #     self.direction = direction
+        self.direction = direction
 
     def draw(self):
         """
@@ -645,7 +648,6 @@ def manaul_mode():
                 elif k == K_LEFT or k == k_left_a:
                     game.step(3)
                 print("o:", str(list([str(d).rjust(5) for d in game.snake.look()])).replace("'", ""))
-
 
 
 def init_pg():

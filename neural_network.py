@@ -24,7 +24,7 @@ class SnakeBrain:
     Output nodes: 4. 1 for each direction the snake can choose
 
     """
-    def __init__(self, weights=None, biases=None, input_size=24, nodes_per_layer=8, output_size=4):
+    def __init__(self, weights=None, biases=None, input_size=24, nodes_per_layer=16, output_size=4):
 
         # Create a brain with random weights and biases
         if not weights and not biases:
@@ -53,18 +53,18 @@ class SnakeBrain:
 
             # The weights and biases between the inputs and hidden layer 1
             # Shape: input_size x nodes_per_layer == 24x8
-            self.weights_input_hidden1 = np.array([np.random.uniform(size=nodes_per_layer) for _ in range(input_size)])
-            self.biases_input_hidden1 = np.random.uniform(size=input_size)
+            self.weights_input_hidden1 = np.array([np.random.uniform(low=-1, size=nodes_per_layer) for _ in range(input_size)])
+            self.biases_input_hidden1 = np.random.uniform(low=-1, size=input_size)
 
             # The weights and biases between hidden layer 1 and hidden layer 2
             # Shape: nodes_per_layer x nodes_per_layer == 8x8
-            self.weights_hidden1_hidden2 = np.array([np.random.uniform(size=nodes_per_layer) for _ in range(nodes_per_layer)])
-            self.biases_hidden1_hidden2 = np.random.uniform(size=self.weights_input_hidden1.shape[1])
+            self.weights_hidden1_hidden2 = np.array([np.random.uniform(low=-1, size=nodes_per_layer) for _ in range(nodes_per_layer)])
+            self.biases_hidden1_hidden2 = np.random.uniform(low=-1, size=self.weights_input_hidden1.shape[1])
 
             # The weights and biases between hidden layer 2 and output layer
             # Shape: nodes_per_layer x output_size == 8x4
-            self.weights_hidden2_output = np.array([np.random.uniform(size=output_size) for _ in range(nodes_per_layer)])
-            self.biases_hidden2_output = np.random.uniform(size=output_size)
+            self.weights_hidden2_output = np.array([np.random.uniform(low=-1, size=output_size) for _ in range(nodes_per_layer)])
+            self.biases_hidden2_output = np.random.uniform(low=-1, size=output_size)
 
         # Create a brain with existing weights and biases
         else:
@@ -90,7 +90,7 @@ class SnakeBrain:
         """
 
         # Add biases then multiply by weights, input => h_layer_1, this is done opposite because the input can be zero
-        h_layer_1_b = input_array  + self.biases_input_hidden1
+        h_layer_1_b = input_array + self.biases_input_hidden1
         h_layer_1_w = np.dot(h_layer_1_b, self.weights_input_hidden1)
         h_layer_1 = self.sigmoid(h_layer_1_w)  # Run the output through a sigmoid function
 
@@ -104,6 +104,9 @@ class SnakeBrain:
         output_b = output_w + self.biases_hidden2_output
 
         output = self.sigmoid(output_b)
+        #print("Input", np.array2string(input_array, max_line_width=99999))
+
+        #print("Output", output)
         return output
 
     @staticmethod
@@ -130,18 +133,19 @@ class SnakeBrain:
 
         # Childs weights and biases
 
-        c_w1 = self.__2d_array_crossover(self.weights_input_hidden1, s_w1)
-        c_b1 = self.__1d_array_crossover(self.biases_input_hidden1, s_b1)
+        c1_w1, c2_w1 = self.__2d_array_crossover(self.weights_input_hidden1, s_w1)
+        c1_b1, c2_b1 = self.__1d_array_crossover(self.biases_input_hidden1, s_b1)
 
-        c_w2 = self.__2d_array_crossover(self.weights_hidden1_hidden2, s_w2)
-        c_b2 = self.__1d_array_crossover(self.biases_hidden1_hidden2, s_b2)
+        c1_w2, c2_w2 = self.__2d_array_crossover(self.weights_hidden1_hidden2, s_w2)
+        c1_b2, c2_b2 = self.__1d_array_crossover(self.biases_hidden1_hidden2, s_b2)
 
-        c_w3 = self.__2d_array_crossover(self.weights_hidden2_output, s_w3)
-        c_b3 = self.__1d_array_crossover(self.biases_hidden2_output, s_b3)
+        c1_w3, c2_w3 = self.__2d_array_crossover(self.weights_hidden2_output, s_w3)
+        c1_b3, c2_b3 = self.__1d_array_crossover(self.biases_hidden2_output, s_b3)
 
-        child = SnakeBrain(weights=[c_w1, c_w2, c_w3], biases=[c_b1, c_b2, c_b3])
+        child1 = SnakeBrain(weights=[c1_w1, c1_w2, c1_w3], biases=[c1_b1, c1_b2, c1_b3])
+        child2 = SnakeBrain(weights=[c2_w1, c2_w2, c2_w3], biases=[c2_b1, c2_b2, c2_b3])
 
-        return child
+        return child1, child2
 
     @staticmethod
     def __2d_array_crossover(arr1, arr2):
@@ -151,18 +155,21 @@ class SnakeBrain:
         :param arr2:
         :return: a corssover array comprising of the previous two arrays
         """
+        tmp = arr1.copy()
         for i, row in enumerate(arr1):
             c_p = random.randint(1, len(row) - 1)
-
             arr1[i][c_p:] = arr2[i][c_p:]
+            arr2[i][c_p:] = tmp[i][c_p:]
 
-        return arr1
+        return arr1, arr2
 
     @staticmethod
     def __1d_array_crossover(arr1, arr2):
         c_p = random.randint(1, len(arr1) - 1)
+        tmp = arr1.copy()
         arr1[c_p:] = arr2[c_p:]
-        return arr1
+        arr2[c_p:] = tmp[c_p:]
+        return arr1, arr2
 
     def mutate(self):
         """
@@ -226,7 +233,7 @@ class SnakeBrain:
             output_array = self.get_output(np.array(input_from_game))
             # Get the index of the highest value from the output_array
             # index: 0 => North, 1 => East, 2 => South, 3 => West
-            output = np.argmin(output_array)
+            output = np.argmax(output_array)
 
             # Returns false on snake surviving a game step, score and age on it dying
             result = self.game.step(output)

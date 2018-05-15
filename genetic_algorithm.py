@@ -9,22 +9,32 @@ Comments: https://drive.google.com/file/d/108wd7DU3NtjuimirGHUgL_s3wb6FA7WA/view
 Requirements:
 """
 
-from random import randint, random
+from random import randint, choice
 from math import ceil
+import pickle
 from neural_network import SnakeBrain
 
 # Global variables, placed them here instead of in the class just because these might be interesting to tinker with
-population_size = 10000
+population_size = 500000
 # How many individuals to select for breeding
 # The amount of offspring from per parent is: (populations_size - keep_per_gen - freaks_per_gen) // parents_per_gen
-parents_per_gen = 50
+parent_pairs_per_gen = 10
 # How many of the best individuals to carry over to the next generation
 keep_per_gen = 5
 # How many new, completely random individuals to add each generation, seperate from the mutations
-freaks_per_gen = 10
+freaks_per_gen = 5
 
 mutation_chance_percentage = 5
 show_graphics = False
+delay = 0
+
+
+print("Population size: {}\n"
+      "Parent pairs per generation: {}\n"
+      "Keep per generation: {}\n"
+      "Freaks per generation: {}\n"
+      "Mutation chance: {}%\n======================================"
+      .format(population_size, parent_pairs_per_gen, keep_per_gen, freaks_per_gen, mutation_chance_percentage))
 
 
 class GeneticAlgorithm:
@@ -34,6 +44,8 @@ class GeneticAlgorithm:
         self.converged = False
 
         self.generation = 1
+
+        self.top_score = 0
 
         latest_highest_fitnesses = []
 
@@ -58,25 +70,26 @@ class GeneticAlgorithm:
             # parents = self.pop.roulette_select(num=parents_per_gen)
 
             # for i, _ in enumerate(parents[::2]):
-            for _ in range(parents_per_gen // 2):
+            for _ in range(parent_pairs_per_gen):
 
                 # Select two parents, where higher fitnesses equate to a higher chance to be selected
                 parent1 = self.pop.fitness_based_selection()
                 parent2 = self.pop.fitness_based_selection()
 
                 # Create n children per parent pair, to keep a stable population size. It won't always be the start size
-                for n in range(int(ceil(
-                        (len(self.pop.population) - keep_per_gen - freaks_per_gen) / parents_per_gen * 2))):
+                for n in range(int(ceil((len(self.pop.population) - keep_per_gen - freaks_per_gen) / (parent_pairs_per_gen * 2)))):
 
                     # Create child from two chosen snakes, the child gets a random amount of qualites from each parent
-                    child_snake = parent1.crossover(parent2)
+                    child_snake1, child_snake2 = parent1.crossover(parent2)
 
                     # % Chance of mutation
                     if randint(1, 100) <= mutation_chance_percentage:
-                        child_snake.mutate()
+                        # Select a child at random to mutate
+                        choice([child_snake1, child_snake2]).mutate()
                         mutated += 1
 
-                    new_pop.append(child_snake)
+                    new_pop.append(child_snake1)
+                    new_pop.append(child_snake2)
 
             # Select top individuals to be directly carried over to next generation, this population has been sorted
             for snake in self.pop.population[:keep_per_gen]:
@@ -86,29 +99,42 @@ class GeneticAlgorithm:
             for snake in range(freaks_per_gen):
                 new_pop.append(SnakeBrain())
 
-            # Replace entire population with the new and improved children of the old parents, and give them fitness 0
-            self.pop.population = list([[new_snake, 0] for new_snake in new_pop])
-
             print("Generation: {}  ||  Highest fitness: {}  || Average highest last 10:  {}  ||  Mutated children: {}".
                   format(str(self.generation).rjust(5),
                          str(self.pop.fittest_score).rjust(5),
                          str(sum(latest_highest_fitnesses) / 10)[:5].rjust(5),
                          str(mutated).rjust(5)))
 
+            # Save fit snake for testing
+            if self.pop.fittest_score > self.top_score:
+                with open("fittest_snake.pickle", "wb") as snake:
+                    pickle.dump(self.pop.population[self.pop.fittest_index], snake)
+                    self.top_score = self.pop.fittest_score
+                    print("Saved snake!")
+
+            # Create a new population with the new and improved children of the old parents
+            self.pop = Population(pop_size=0, existing_brains=new_pop)
+
             self.generation += 1
 
 
 class Population:
-    def __init__(self, pop_size=population_size):
+    def __init__(self, pop_size=population_size, existing_brains=list()):
+
         self.population = []
 
-        # Populate population with snek brains
-        for _ in range(pop_size):
-            # Append a brain, and it's fitness. Fitnesses start at zero.
-            # A pair of [SnakeBrain, Fitness] will be reffered to as 'snake'
-            self.population.append([SnakeBrain(), 0])
+        # Populate population with new snek brains
+        if not existing_brains:
+            for _ in range(pop_size):
+                # Append a brain, and it's fitness. Fitnesses start at zero.
+                # A pair of [SnakeBrain, Fitness] will be reffered to as 'snake'
+                self.population.append([SnakeBrain(), 0])
+        # Reset the fitness of all the old snek brains, and add them to the population
+        else:
+            for brain in existing_brains:
+                self.population.append([brain, 0])
 
-        # just for logging
+        # Just for logging
         self.fittest_score = 0
         self.fittest_index = 0
 
@@ -119,9 +145,9 @@ class Population:
         """
 
         for i, snake in enumerate(self.population):
-            score, age = snake[0].play(graphical=show_graphics)  # Returns the score of the brains game
+            score, age = snake[0].play(graphical=show_graphics, delay=delay)  # Returns the score of the brains game
             # The main fitness function
-            fitness = age * 2**score
+            fitness = age
             self.population[i][1] = fitness  # Update the brains fitness in the population list
 
         # Sort the population by fitness, todo: check if actually needed
@@ -142,29 +168,6 @@ class Population:
 
         self.fittest_score = max_fit
 
-    def roulette_select(self, num):
-        """ Roulette selection, implemented according to:
-            <http://stackoverflow.com/questions/177271/roulette
-            -selection-in-genetic-algorithms/177278#177278>
-        """
-        population = self.population
-        fitnesses = list([snake[1] for snake in self.population])  # [1, 0, 0, 1 , 0, 3, 2, 0, 1]
-        total_fitness = float(sum(fitnesses))  # 6
-        rel_fitness = [f / total_fitness for f in fitnesses]  # [1/8, 0, 0, 1/8, 0, 3/8, 2/8, 0, 1/8]
-        # Generate probability intervals for each individual
-        probs = [sum(rel_fitness[:i + 1]) for i in range(len(rel_fitness))]  # [1/8, 1/8, 1/8, 2/8, 2/8, 5/8, 7/8, 7/8, 8/8]
-        new_population = []
-        m = []
-        for _ in range(num):
-            r = random()
-            for (i, individual) in enumerate(population):
-                if r <= probs[i]:
-                    m.append(individual[1])
-                    new_population.append(individual[0])
-                    break
-        from numpy import mean
-        return new_population
-
     def fitness_based_selection(self):
         """
         A slection process that chooses a snake, where a snake with a higher fitness has a higher chance of being
@@ -180,9 +183,18 @@ class Population:
 
         for snake in self.population:
             current_sum += snake[1]
-            if current_sum > r:
+            if current_sum >= r:
                 # Return brain of chosen snake
+                #print("Sum:", sum_fitnesses)
+                #print("Point", r)
+                #print("Current:", current_sum)
+                #print("Parent IQ:", snake[1])
                 return snake[0]
+        print("==== FAILED ====")
+        print("Sum:", sum_fitnesses)
+        print("Point", r)
+        print("Current:", current_sum)
+        return self.population[self.fittest_index][0]
 
 
 # todo: I think the problem is that the fittest snakes aren't being selected, or there's a problem with the game output,
