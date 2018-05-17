@@ -24,7 +24,7 @@ class SnakeBrain:
     Output nodes: 4. 1 for each direction the snake can choose
 
     """
-    def __init__(self, weights=None, biases=None, input_size=24, nodes_per_layer=16, output_size=4):
+    def __init__(self, weights=None, biases=None, input_size=24, nodes_per_layer=8, output_size=4):
 
         # Create a brain with random weights and biases
         if not weights and not biases:
@@ -90,8 +90,8 @@ class SnakeBrain:
         """
 
         # Add biases then multiply by weights, input => h_layer_1, this is done opposite because the input can be zero
-        h_layer_1_b = input_array + self.biases_input_hidden1
-        h_layer_1_w = np.dot(h_layer_1_b, self.weights_input_hidden1)
+        # todo: add back: h_layer_1_b = input_array + self.biases_input_hidden1
+        h_layer_1_w = np.dot(input_array, self.weights_input_hidden1)
         h_layer_1 = self.sigmoid(h_layer_1_w)  # Run the output through a sigmoid function
 
         # Multiply by weights then add biases, h_layer_1 => h_layer_2
@@ -157,7 +157,7 @@ class SnakeBrain:
         """
         tmp = arr1.copy()
         for i, row in enumerate(arr1):
-            c_p = random.randint(1, len(row) - 1)
+            c_p = random.randint(0, len(row))
             arr1[i][c_p:] = arr2[i][c_p:]
             arr2[i][c_p:] = tmp[i][c_p:]
 
@@ -165,7 +165,7 @@ class SnakeBrain:
 
     @staticmethod
     def __1d_array_crossover(arr1, arr2):
-        c_p = random.randint(1, len(arr1) - 1)
+        c_p = random.randint(0, len(arr1))
         tmp = arr1.copy()
         arr1[c_p:] = arr2[c_p:]
         arr2[c_p:] = tmp[c_p:]
@@ -214,16 +214,17 @@ class SnakeBrain:
 
         return arr1
 
-    def play(self, graphical=True, delay: float=0.):
+    def play(self, graphical=True, delay: float=0., fruits=True):
         """
         Instruct this brain to play a game of snake.
 
         :param graphical: Whether or not to show the game, boosts performance by 70% without it
         :param delay: Optional delay between steps, easier to see what the snake is doing
+        :param fruits: Whether or not to spawn fruits
         :return: Score, age
         """
         # The game of 'snake!' that this brain will use
-        self.game = snake_custom.SnakeGame(graphical)
+        self.game = snake_custom.SnakeGame(graphical, fruits)
 
         while True:
             # Get what the snake can 'see'

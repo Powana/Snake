@@ -119,10 +119,10 @@ class Snake:
         # NN: todo: this made it worse
         # Let the NN try to go into itself, it should die
         # There's probaby a better way to do this
-        # not_allowed = {SOUTH: NORTH, NORTH: SOUTH, EAST: WEST, WEST: EAST}
-        # if not_allowed[direction] != self.direction:
-        #     self.direction = direction
-        self.direction = direction
+        not_allowed = {SOUTH: NORTH, NORTH: SOUTH, EAST: WEST, WEST: EAST}
+        if not_allowed[direction] != self.direction:
+            self.direction = direction
+        # self.direction = direction
 
     def draw(self):
         """
@@ -361,7 +361,7 @@ class Snake:
         # Normalize array
         norm_vision_array = list([float(i)/sum_visions for i in vision_array])
 
-        return norm_vision_array
+        return vision_array
 
     def update_world_coords(self):
         # NN:
@@ -470,9 +470,21 @@ def game_over(score):
 
 
 # NN:
+# Helper class to spawn when not using fruits, easier to do this than to modify the other classes
+class FakeFruit:
+    def __init__(self):
+        # Used by the Snakes collision check
+        self.corner_pos = 0
+
+    # Called when updating GUI
+    def draw(self):
+        pass
+
+
+# NN:
 # Used for the nerual network, the game is still playable without this class.
 class SnakeGame:
-    def __init__(self, draw_gui):
+    def __init__(self, draw_gui, fruits=True):
         """
         I decided to just use all the global variables instead of parsing them here again to save time
         """
@@ -485,6 +497,7 @@ class SnakeGame:
         # Reset world
         world = np.zeros((width, height))
 
+        # How many fruits the snake has eaten
         self.score = 0
 
         # The snake (:
@@ -493,8 +506,8 @@ class SnakeGame:
                            spawn_dir=snake_spawn_direction,
                            draw_snake=draw_gui)
 
-        # Generate the first fruit
-        self.fruit = Fruit(avoid_snake=self.snake)
+        # Generate the first fruit, if fruits is true, else spawn a FakeFruit that won't interfere with the snake
+        self.fruit = Fruit(avoid_snake=self.snake) if fruits else FakeFruit()
 
         # The gameboard
         self.checker_board = CheckerBoard(b_width=width, b_height=height, b_tilesize=tilesize)

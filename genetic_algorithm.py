@@ -15,17 +15,18 @@ import pickle
 from neural_network import SnakeBrain
 
 # Global variables, placed them here instead of in the class just because these might be interesting to tinker with
-population_size = 500000
+population_size = 50000
 # How many individuals to select for breeding
 # The amount of offspring from per parent is: (populations_size - keep_per_gen - freaks_per_gen) // parents_per_gen
-parent_pairs_per_gen = 10
+parent_pairs_per_gen = 100
 # How many of the best individuals to carry over to the next generation
-keep_per_gen = 5
+keep_per_gen = 2
 # How many new, completely random individuals to add each generation, seperate from the mutations
-freaks_per_gen = 5
+freaks_per_gen = 50
 
 mutation_chance_percentage = 5
 show_graphics = False
+spawn_fruits = True
 delay = 0
 
 
@@ -145,7 +146,8 @@ class Population:
         """
 
         for i, snake in enumerate(self.population):
-            score, age = snake[0].play(graphical=show_graphics, delay=delay)  # Returns the score of the brains game
+            # Returns the score of the brains game
+            score, age = snake[0].play(graphical=show_graphics, delay=delay, fruits=spawn_fruits)
             # The main fitness function
             fitness = age
             self.population[i][1] = fitness  # Update the brains fitness in the population list
