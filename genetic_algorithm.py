@@ -15,7 +15,7 @@ import pickle
 from neural_network import SnakeBrain
 
 # Global variables, placed them here instead of in the class just because these might be interesting to tinker with
-population_size = 50000
+population_size = 100000
 # How many individuals to select for breeding
 # The amount of offspring from per parent is: (populations_size - keep_per_gen - freaks_per_gen) // parents_per_gen
 parent_pairs_per_gen = 100
@@ -108,8 +108,8 @@ class GeneticAlgorithm:
 
             # Save fit snake for testing
             if self.pop.fittest_score > self.top_score:
-                with open("fittest_snake.pickle", "wb") as snake:
-                    pickle.dump(self.pop.population[self.pop.fittest_index], snake)
+                with open("fittest_snake.pickle", "wb") as snake_file:
+                    pickle.dump(self.pop.population[self.pop.fittest_index], snake_file)
                     self.top_score = self.pop.fittest_score
                     print("Saved snake!")
 
@@ -148,8 +148,8 @@ class Population:
         for i, snake in enumerate(self.population):
             # Returns the score of the brains game
             score, age = snake[0].play(graphical=show_graphics, delay=delay, fruits=spawn_fruits)
-            # The main fitness function
-            fitness = age
+            # The fitness function, set to only the snakes age if not using fruits, or age * 2 **score with fruits
+            fitness = age if not spawn_fruits else age * 2**score
             self.population[i][1] = fitness  # Update the brains fitness in the population list
 
         # Sort the population by fitness, todo: check if actually needed
@@ -198,7 +198,4 @@ class Population:
         print("Current:", current_sum)
         return self.population[self.fittest_index][0]
 
-
-# todo: I think the problem is that the fittest snakes aren't being selected, or there's a problem with the game output,
-# or that the initial values arent random enough, the snake basically never changes direction
 GeneticAlgorithm()

@@ -78,9 +78,6 @@ class SnakeBrain:
             self.weights_hidden2_output = weights[2]
             self.biases_hidden2_output = biases[2]
 
-        # Placeholder for the game of Snake this brain will act upon
-        self.game = None
-
     def get_output(self, input_array: np.ndarray):
         """
         Get output from input by feed forwarding it through the network
@@ -90,8 +87,8 @@ class SnakeBrain:
         """
 
         # Add biases then multiply by weights, input => h_layer_1, this is done opposite because the input can be zero
-        # todo: add back: h_layer_1_b = input_array + self.biases_input_hidden1
-        h_layer_1_w = np.dot(input_array, self.weights_input_hidden1)
+        h_layer_1_b = input_array + self.biases_input_hidden1
+        h_layer_1_w = np.dot(h_layer_1_b, self.weights_input_hidden1)
         h_layer_1 = self.sigmoid(h_layer_1_w)  # Run the output through a sigmoid function
 
         # Multiply by weights then add biases, h_layer_1 => h_layer_2
@@ -224,11 +221,11 @@ class SnakeBrain:
         :return: Score, age
         """
         # The game of 'snake!' that this brain will use
-        self.game = snake_custom.SnakeGame(graphical, fruits)
+        game = snake_custom.SnakeGame(graphical, fruits)
 
         while True:
             # Get what the snake can 'see'
-            input_from_game = self.game.snake.look()
+            input_from_game = game.snake.look()
 
             # Feed forward the values from the snake's vision
             output_array = self.get_output(np.array(input_from_game))
@@ -237,7 +234,7 @@ class SnakeBrain:
             output = np.argmax(output_array)
 
             # Returns false on snake surviving a game step, score and age on it dying
-            result = self.game.step(output)
+            result = game.step(output)
 
             # Game has ended
             if type(result) == tuple:
