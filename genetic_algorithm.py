@@ -58,7 +58,7 @@ class GeneticAlgorithm:
             # Save the fittest score of the current generation, only used for logging
             self.pop.calc_fittest_score()
 
-            latest_highest_fitnesses.append(self.pop.fittest_score)
+            latest_highest_fitnesses.append(self.pop.highest_fitness)
             if len(latest_highest_fitnesses) > 10:
                 latest_highest_fitnesses.pop(0)
 
@@ -93,24 +93,24 @@ class GeneticAlgorithm:
                     new_pop.append(child_snake2)
 
             # Select top individuals to be directly carried over to next generation, this population has been sorted
-            for snake in self.pop.population[:keep_per_gen]:
+            for snake in sorted(self.pop.population, key=lambda e: e[1], reverse=True)[:keep_per_gen]:
                 new_pop.append(snake[0])
 
             # Generate a few completely random new snakes
-            for snake in range(freaks_per_gen):
+            for i in range(freaks_per_gen):
                 new_pop.append(SnakeBrain())
 
             print("Generation: {}  ||  Highest fitness: {}  || Average highest last 10:  {}  ||  Mutated children: {}".
                   format(str(self.generation).rjust(5),
-                         str(self.pop.fittest_score).rjust(5),
+                         str(self.pop.highest_fitness).rjust(5),
                          str(sum(latest_highest_fitnesses) / 10)[:5].rjust(5),
                          str(mutated).rjust(5)))
 
             # Save fit snake for testing
-            if self.pop.fittest_score > self.top_score:
+            if self.pop.highest_fitness > self.top_score:
                 with open("fittest_snake.pickle", "wb") as snake:
                     pickle.dump(self.pop.population[self.pop.fittest_index], snake)
-                    self.top_score = self.pop.fittest_score
+                    self.top_score = self.pop.highest_fitness
                     print("Saved snake!")
 
             # Create a new population with the new and improved children of the old parents
@@ -136,7 +136,7 @@ class Population:
                 self.population.append([brain, 0])
 
         # Just for logging
-        self.fittest_score = 0
+        self.highest_fitness = 0
         self.fittest_index = 0
 
     def calc_fitness(self):
@@ -149,11 +149,8 @@ class Population:
             # Returns the score of the brains game
             score, age = snake[0].play(graphical=show_graphics, delay=delay, fruits=spawn_fruits)
             # The main fitness function
-            fitness = age
+            fitness = age if not spawn_fruits else score
             self.population[i][1] = fitness  # Update the brains fitness in the population list
-
-        # Sort the population by fitness, todo: check if actually needed
-        self.population = sorted(self.population, key=lambda e: e[1], reverse=True)
 
     def calc_fittest_score(self):
         """
@@ -168,7 +165,12 @@ class Population:
                 max_fit = snake[1]
                 self.fittest_index = i
 
-        self.fittest_score = max_fit
+        self.highest_fitness = max_fit
+
+        # print("Fittest:", sorted(self.population, key=lambda e: e[1], reverse=True)[0][0].id)
+        # print("HF:", self.highest_fitness)
+        # print("HI:", self.fittest_index)
+        # print(self.population[self.fittest_index][0].id)
 
     def fitness_based_selection(self):
         """
@@ -196,7 +198,7 @@ class Population:
         print("Sum:", sum_fitnesses)
         print("Point", r)
         print("Current:", current_sum)
-        return self.population[self.fittest_index][0]
+        return self.population[0][0]
 
 
 # todo: I think the problem is that the fittest snakes aren't being selected, or there's a problem with the game output,

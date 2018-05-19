@@ -16,8 +16,8 @@ Requirements: pygame, numpy, a pc from at least 1657, anything older may not be 
 
 
 # Dimensions of board/tileset, prefeably an odd number
-width = 9
-height = 9
+width = 19
+height = 19
 
 # I decided to use (coord*tilesize) for placing my objects instead of using a tileset, as it's simpler and this code
 # is not intended to be used outside of this script.
@@ -220,9 +220,8 @@ class Snake:
         # n_d_t_w : north_distance_to_wall
         n_d_t_w = h_c[1]
         for i, row in enumerate(reversed(world[:h_c[1]])):
-            if row[h_c[0]] == 2:  # Check the tile on the row that aligns with the heads x coordinate
+            if row[h_c[0]] == 2:  # Check the tile on the row that aligns with the heads x coordinate for fruit
                 n_d_t_f = i
-                break
 
             if row[h_c[0]] == 1:  # Check for snake
                 n_d_t_s = i
@@ -233,7 +232,6 @@ class Snake:
         for i, row in enumerate(world[h_c[1]+1:]):
             if row[h_c[0]] == 2:  # Check the tile on the row that aligns with the heads x coordinate
                 s_d_t_f = i
-                break
 
             if row[h_c[0]] == 1:  # Check for snake
                 s_d_t_s = i
@@ -245,7 +243,6 @@ class Snake:
         for i, tile in enumerate(world[h_c[1]][h_c[0]+1:]):
             if tile == 2:  # Check for fruit
                 e_d_t_f = i
-                break
 
             if tile == 1:  # Check for snake
                 e_d_t_s = i
@@ -257,7 +254,6 @@ class Snake:
         for i, tile in enumerate(reversed(world[h_c[1]][:h_c[0]])):
             if tile == 2:  # Check for fruit
                 w_d_t_f = i
-                break
 
             if tile == 1:  # Check for snake
                 w_d_t_s = i
@@ -289,6 +285,7 @@ class Snake:
                 ne_d_t_f = i
             if tile == 1:
                 ne_d_t_s = i
+                break
 
         # Southwest
         r = -1
@@ -306,6 +303,7 @@ class Snake:
                 sw_d_t_f = i
             if tile == 1:
                 sw_d_t_s = i
+                break
 
         # Northwest
         r = -1
@@ -323,6 +321,7 @@ class Snake:
                 nw_d_t_f = i
             if tile == 1:
                 nw_d_t_s = i
+                break
 
         # Southeast
         r = -1
@@ -340,6 +339,7 @@ class Snake:
                 se_d_t_f = i
             if tile == 1:
                 se_d_t_s = i
+                break
 
         vision_array = [
             n_d_t_w, n_d_t_f, n_d_t_s,  # yes, no, no flipped?
@@ -357,7 +357,6 @@ class Snake:
             vision_array[i] += 1
 
         sum_visions = sum(vision_array)
-
         # Normalize array
         norm_vision_array = list([float(i)/sum_visions for i in vision_array])
 

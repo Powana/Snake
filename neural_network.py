@@ -26,6 +26,9 @@ class SnakeBrain:
     """
     def __init__(self, weights=None, biases=None, input_size=24, nodes_per_layer=8, output_size=4):
 
+        #todo: remove
+        self.id = random.randint(-9999, 9999)
+
         # Create a brain with random weights and biases
         if not weights and not biases:
             """
@@ -90,8 +93,8 @@ class SnakeBrain:
         """
 
         # Add biases then multiply by weights, input => h_layer_1, this is done opposite because the input can be zero
-        # todo: add back: h_layer_1_b = input_array + self.biases_input_hidden1
-        h_layer_1_w = np.dot(input_array, self.weights_input_hidden1)
+        h_layer_1_b = input_array + self.biases_input_hidden1
+        h_layer_1_w = np.dot(h_layer_1_b, self.weights_input_hidden1)
         h_layer_1 = self.sigmoid(h_layer_1_w)  # Run the output through a sigmoid function
 
         # Multiply by weights then add biases, h_layer_1 => h_layer_2
@@ -104,9 +107,7 @@ class SnakeBrain:
         output_b = output_w + self.biases_hidden2_output
 
         output = self.sigmoid(output_b)
-        #print("Input", np.array2string(input_array, max_line_width=99999))
 
-        #print("Output", output)
         return output
 
     @staticmethod
@@ -195,8 +196,8 @@ class SnakeBrain:
         for i, row in enumerate(arr1):
             i_1 = random.randint(0, len(row) - 1)
             i_2 = random.randint(0, len(row) - 1)
-            arr1[i][i_1] = random.random()
-            arr1[i][i_2] = random.random()
+            arr1[i][i_1] = random.uniform(-1, 1)
+            arr1[i][i_2] = random.uniform(-1, 1)
 
         return arr1
 
@@ -209,8 +210,8 @@ class SnakeBrain:
 
         i_1 = random.randint(0, len(arr1) - 1)
         i_2 = random.randint(0, len(arr1) - 1)
-        arr1[i_1] = random.random()
-        arr1[i_2] = random.random()
+        arr1[i_1] = random.uniform(-1, 1)
+        arr1[i_2] = random.uniform(-1, 1)
 
         return arr1
 
