@@ -11,20 +11,27 @@ Requirements:
 
 from random import randint, choice
 from math import ceil
+from heapq import nlargest
 import pickle
 from neural_network import SnakeBrain
 
 # Global variables, placed them here instead of in the class just because these might be interesting to tinker with
-population_size = 100000
+population_size = 50000
 # How many individuals to select for breeding
 # The amount of offspring from per parent is: (populations_size - keep_per_gen - freaks_per_gen) // parents_per_gen
 parent_pairs_per_gen = 100
 # How many of the best individuals to carry over to the next generation
-keep_per_gen = 2
+keep_per_gen = 25000
 # How many new, completely random individuals to add each generation, seperate from the mutations
 freaks_per_gen = 50
 
-mutation_chance_percentage = 5
+mutation_chance_percentage = 0
+
+use_uniform_crossover = True
+user_tournament_selection = False
+
+
+# Game details
 show_graphics = False
 spawn_fruits = True
 delay = 0
@@ -66,22 +73,25 @@ class GeneticAlgorithm:
             new_pop = []
 
             mutated = 0
-            # print(len(self.pop.population))
-            # Select parents for next generation
-            # parents = self.pop.roulette_select(num=parents_per_gen)
+            print(len(self.pop.population))
 
-            # for i, _ in enumerate(parents[::2]):
             for _ in range(parent_pairs_per_gen):
 
                 # Select two parents, where higher fitnesses equate to a higher chance to be selected
-                parent1 = self.pop.fitness_based_selection()
-                parent2 = self.pop.fitness_based_selection()
+                parent1 = self.pop.fitness_based_selection() if not user_tournament_selection else \
+                          self.pop.tournament_selection()
+
+                parent2 = self.pop.fitness_based_selection() if not user_tournament_selection else \
+                    self.pop.tournament_selection()
 
                 # Create n children per parent pair, to keep a stable population size. It won't always be the start size
-                for n in range(int(ceil((len(self.pop.population) - keep_per_gen - freaks_per_gen) / (parent_pairs_per_gen * 2)))):
+                for n in range(int(ceil((len(self.pop.population) - keep_per_gen - freaks_per_gen) /
+                                        (parent_pairs_per_gen * 2)))):
 
-                    # Create child from two chosen snakes, the child gets a random amount of qualites from each parent
-                    child_snake1, child_snake2 = parent1.crossover(parent2)
+                    # Create child from two chosen snakes, using the chosen crossover method
+                    child_snake1, child_snake2 = parent1.single_point_crossover(parent2) \
+                        if not use_uniform_crossover \
+                        else parent1.uniform_crossover(parent2)
 
                     # % Chance of mutation
                     if randint(1, 100) <= mutation_chance_percentage:
@@ -92,7 +102,7 @@ class GeneticAlgorithm:
                     new_pop.append(child_snake1)
                     new_pop.append(child_snake2)
 
-            # Select top individuals to be directly carried over to next generation, this population has been sorted
+            # Select top individuals to be directly carried over to next generation, from a sorted population
             for snake in sorted(self.pop.population, key=lambda e: e[1], reverse=True)[:keep_per_gen]:
                 new_pop.append(snake[0])
 
@@ -107,17 +117,10 @@ class GeneticAlgorithm:
                          str(mutated).rjust(5)))
 
             # Save fit snake for testing
-<<<<<<< HEAD
             if self.pop.highest_fitness > self.top_score:
                 with open("fittest_snake.pickle", "wb") as snake:
                     pickle.dump(self.pop.population[self.pop.fittest_index], snake)
                     self.top_score = self.pop.highest_fitness
-=======
-            if self.pop.fittest_score > self.top_score:
-                with open("fittest_snake.pickle", "wb") as snake_file:
-                    pickle.dump(self.pop.population[self.pop.fittest_index], snake_file)
-                    self.top_score = self.pop.fittest_score
->>>>>>> 069c5c7fbda991ab971596d2d74bb0fee757d5e2
                     print("Saved snake!")
 
             # Create a new population with the new and improved children of the old parents
@@ -155,13 +158,8 @@ class Population:
         for i, snake in enumerate(self.population):
             # Returns the score of the brains game
             score, age = snake[0].play(graphical=show_graphics, delay=delay, fruits=spawn_fruits)
-<<<<<<< HEAD
             # The main fitness function
-            fitness = age if not spawn_fruits else score
-=======
-            # The fitness function, set to only the snakes age if not using fruits, or age * 2 **score with fruits
-            fitness = age if not spawn_fruits else age * 2**score
->>>>>>> 069c5c7fbda991ab971596d2d74bb0fee757d5e2
+            fitness = age * 2**score
             self.population[i][1] = fitness  # Update the brains fitness in the population list
 
     def calc_fittest_score(self):
@@ -201,15 +199,21 @@ class Population:
             current_sum += snake[1]
             if current_sum >= r:
                 # Return brain of chosen snake
-                #print("Sum:", sum_fitnesses)
-                #print("Point", r)
-                #print("Current:", current_sum)
-                #print("Parent IQ:", snake[1])
                 return snake[0]
         print("==== FAILED ====")
         print("Sum:", sum_fitnesses)
         print("Point", r)
         print("Current:", current_sum)
         return self.population[0][0]
+
+    def tournament_selection(self, size=2):
+
+        candidates = [choice(self.population) for _ in range(size)]
+
+        winners = nlargest(2, candidates)  # todo
+
+        return winners
+
+
 
 GeneticAlgorithm()

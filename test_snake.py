@@ -1,5 +1,7 @@
 import pickle
 
+# Run this to test the currently saved fittest snake
+
 while True:
     with open("fittest_snake.pickle", "rb") as file:
         snake = pickle.load(file)

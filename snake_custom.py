@@ -16,8 +16,8 @@ Requirements: pygame, numpy, a pc from at least 1657, anything older may not be 
 
 
 # Dimensions of board/tileset, prefeably an odd number
-width = 19
-height = 19
+width = 9
+height = 9
 
 # I decided to use (coord*tilesize) for placing my objects instead of using a tileset, as it's simpler and this code
 # is not intended to be used outside of this script.
@@ -116,7 +116,7 @@ class Snake:
         :param direction:
         :return:
         """
-        # NN: todo: this made it worse
+        # NN:
         # Let the NN try to go into itself, it should die
         # There's probaby a better way to do this
         not_allowed = {SOUTH: NORTH, NORTH: SOUTH, EAST: WEST, WEST: EAST}
@@ -357,8 +357,8 @@ class Snake:
             vision_array[i] += 1
 
         sum_visions = sum(vision_array)
-        # Normalize array
-        norm_vision_array = list([float(i)/sum_visions for i in vision_array])
+        # Normalize array, not used anymore
+        # norm_vision_array = list([float(i)/sum_visions for i in vision_array])
 
         return vision_array
 
@@ -676,5 +676,7 @@ def init_pg():
 
 if __name__ == '__main__':
     init_pg()
-    manaul_mode()
-    # main()
+
+    # Change to manual if you want to play the game step by step
+    # manaul_mode()
+    main()
