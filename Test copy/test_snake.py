@@ -2,9 +2,9 @@ import pickle
 
 # Run this to test the currently saved fittest snake
 
-snakenum = 749
+snakenum = 101
 
-with open("Test copy/fittest_snake_" + str(snakenum) + ".pickle", "rb") as file:
+with open("fittest_snake_" + str(snakenum) + ".pickle", "rb") as file:
         snake = pickle.load(file)
         print(snake["snake_settings"])
 

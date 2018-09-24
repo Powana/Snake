@@ -17,7 +17,7 @@ Requirements: pygame, numpy, a pc from at least 1657, anything older may not be 
 """
 
 
-# Dimensions of board/tileset, prefeably an odd number
+# Dimensions of board/tileset, preferably an odd number
 width = 9
 height = 9
 
@@ -89,8 +89,8 @@ class Snake:
         self.direction = spawn_dir
 
         if draw_snake:
-            self.head_sprite = pg.image.load("res/head.png").convert_alpha()
-            self.body_sprite = pg.image.load("res/body.png").convert_alpha()
+            self.head_sprite = pg.image.load("../res/head.png").convert_alpha()
+            self.body_sprite = pg.image.load("../res/body.png").convert_alpha()
 
         # === Initial snake spawning === #
 
@@ -157,7 +157,7 @@ class Snake:
         drct = self.direction
         self.pos[0] = [[self.pos[0][0][0] + offsets[drct][0], self.pos[0][0][1] + offsets[drct][1]], drct]
 
-    def has_collided(self, fruit):
+    def has_collided(self):
         """
         After the snake has moved, check if the head collided with anything
         :return: 1: Player died, 2: Player hit the fruit, 3: Nothing collided
@@ -172,7 +172,17 @@ class Snake:
         elif 0 > pos[0] or (width-1)*tilesize < pos[0] or 0 > pos[1] or (height-1)*tilesize < pos[1]:
             return 1
 
-        elif pos == fruit.corner_pos:
+        # Find fruits where corner_pos matches pos, should only ever return one fruit
+        f = [fruit for fruit in Fruit.fruits if fruit.corner_pos == pos]
+        if f:
+            f = f[0]
+
+            # Change old fruit's coord in world to be a snake
+            world[f.corner_pos[1] // tilesize][f.corner_pos[0] // tilesize] = 1
+
+            # Remove old fruit and spawn a new one
+            Fruit.fruits.remove(f)
+            Fruit(self)
             self.grow()
             return 2
 
@@ -372,11 +382,11 @@ class Snake:
 
 
 class Fruit:
-    # Todo: Add support for multiple fruits (rewrite class)
+    fruits = []
     def __init__(self, avoid_snake: Snake):
         """
         Generate a fruit on a random tile that the snake is not currently occupying
-        :param avoid_snake: the snake to avoid
+        :param avoid_snake: the snake to avoid when spawning fruit
         """
         impossible_spawns = []
         spawn_pos = []
@@ -385,6 +395,8 @@ class Fruit:
         # This could be made into one massive inline loop, but this is more readable
         for xy in [pos[0] for pos in avoid_snake.pos]:
             impossible_spawns.append(xy)
+        for fruit in Fruit.fruits:
+            impossible_spawns.append(fruit.corner_pos)
 
         # I could have made a large array of possible_spawns, but it turns out this is faster
         # Check if spawn_pos is impossible or nonexistant, if it is, generate a new one.
@@ -397,6 +409,8 @@ class Fruit:
         # NN:
         # Add the fruits coord to world coords
         world[spawn_pos[1] // tilesize][spawn_pos[0] // tilesize] = 2
+
+        Fruit.fruits.append(self)
 
     def draw(self):
         # The fruit
@@ -486,7 +500,7 @@ class FakeFruit:
 # NN:
 # Used for the nerual network, the game is still playable without this class.
 class SnakeGame:
-    def __init__(self, draw_gui, fruits=True):
+    def __init__(self, draw_gui, n_fruits=0):
         """
         I decided to just use all the global variables instead of parsing them here again to save time
         """
@@ -508,8 +522,8 @@ class SnakeGame:
                            spawn_dir=snake_spawn_direction,
                            draw_snake=draw_gui)
 
-        # Generate the first fruit, if fruits is true, else spawn a FakeFruit that won't interfere with the snake
-        self.fruit = Fruit(avoid_snake=self.snake) if fruits else FakeFruit()
+        # Generate the first fruits, if n_fruits is true, else spawn a FakeFruit that won't interfere with the snake
+        Fruit.fruits = [Fruit(avoid_snake=self.snake) if n_fruits else FakeFruit() for _ in range(n_fruits)]
 
         # The gameboard
         self.checker_board = CheckerBoard(b_width=width, b_height=height, b_tilesize=tilesize)
@@ -547,12 +561,13 @@ class SnakeGame:
             # Draw objects
             self.checker_board.draw()
             self.snake.update()  # move + draw
-            self.fruit.draw()
+            for fruit in Fruit.fruits:
+                fruit.draw()
         else:
             self.snake.move()
 
         # I placed this outside of the Snake class, as it seemed to make more sense for it to be in the game loop
-        collided = self.snake.has_collided(self.fruit)
+        collided = self.snake.has_collided()
 
         if collided == 1 or self.steps_left == 0:
             # The snake is dead, return the score and age for the NN to use as fitness
@@ -560,10 +575,6 @@ class SnakeGame:
 
         elif collided == 2:
             # Snake ate a fruit
-            # NN:
-            # Change old fruit's coord in world to be a snake
-            world[self.fruit.corner_pos[1] // tilesize][self.fruit.corner_pos[0] // tilesize] = 1
-            self.fruit = Fruit(self.snake)
             self.score += 1
             # Reset the step counter
             self.steps_left = max_steps
@@ -572,7 +583,7 @@ class SnakeGame:
         self.snake.update_world_coords()
 
         if self.draw_gui:
-            # Update the display, not needed for the NN, but fun to look at, probably slows it down a ton though
+            # Update the display, not needed for the NN, but fun to look at, slows it down a ton though
             pg.display.flip()
 
         self.steps_left -= 1
@@ -592,7 +603,7 @@ def main():
     snake = Snake(spawn_coord=[2, 3], spawn_length=snake_spawn_length, spawn_dir=snake_spawn_direction)
 
     # Generate the first fruit
-    fruit = Fruit(avoid_snake=snake)
+    Fruit(avoid_snake=snake)
 
     # The gameboard
     checker_board = CheckerBoard(b_width=width, b_height=height, b_tilesize=tilesize)
@@ -623,11 +634,12 @@ def main():
 
         # Draw objects
         checker_board.draw()
-        fruit.draw()
+        for fruit in Fruit.fruits:
+            fruit.draw()
         snake.update()  # move + draw
 
         # I placed this outside of the Snake class, as it seemed to make more sense for it to be in the game loop
-        collided = snake.has_collided(fruit)
+        collided = snake.has_collided()
         if collided == 1:
             game_over(score)
             # This code is only run if player continues, it overwrites the old snake with a new snake:
@@ -637,8 +649,6 @@ def main():
             score = 0
         elif collided == 2:
             # Snake ate a fruit
-            # Make a new fruit
-            fruit = Fruit(snake)
             score += 1
 
         # Update the display
@@ -648,7 +658,7 @@ def main():
 
 
 def manaul_mode():
-    game = SnakeGame(True)
+    game = SnakeGame(True, 5)
 
     while True:
         for ev in pg.event.get():  # ev : event

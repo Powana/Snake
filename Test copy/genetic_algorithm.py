@@ -13,36 +13,44 @@ from random import randint, choice
 from math import ceil
 from heapq import nlargest
 import pickle
-from neural_network import SnakeBrain
+from neural_network_2 import SnakeBrain
 
 # Global variables, placed them here instead of in the class just because these might be interesting to tinker with
-population_size = 50000
+population_size = 500
 # How many individuals to select for breeding
 # The amount of offspring from per parent is: (populations_size - keep_per_gen - freaks_per_gen) // parents_per_gen
-parent_pairs_per_gen = 100
+parent_pairs_per_gen = 35
 # How many of the best individuals to carry over to the next generation
-keep_per_gen = 25
+keep_per_gen = 2
 # How many new, completely random individuals to add each generation, seperate from the mutations
-freaks_per_gen = 50
+freaks_per_gen = 15
 
-mutation_chance_percentage = 0
+mutation_chance_percentage = 8
 
 use_uniform_crossover = True
-user_tournament_selection = False
+use_tournament_selection = False
 
 
 # Game details
 show_graphics = False
-spawn_fruits = True
+spawn_n_fruits = 5
 delay = 0
 
+# Used for saving a unique snake, not a good solution but works for the time-being
+snakenum = randint(0, 999)
 
 print("Population size: {}\n"
       "Parent pairs per generation: {}\n"
       "Keep per generation: {}\n"
       "Freaks per generation: {}\n"
+      "Crossover method: {}\n"
       "Mutation chance: {}%\n======================================"
-      .format(population_size, parent_pairs_per_gen, keep_per_gen, freaks_per_gen, mutation_chance_percentage))
+      .format(population_size,
+              parent_pairs_per_gen,
+              keep_per_gen,
+              freaks_per_gen,
+              "Uniform" if use_uniform_crossover else "Single-Point",
+              mutation_chance_percentage))
 
 
 class GeneticAlgorithm:
@@ -73,15 +81,14 @@ class GeneticAlgorithm:
             new_pop = []
 
             mutated = 0
-            print(len(self.pop.population))
 
             for _ in range(parent_pairs_per_gen):
 
                 # Select two parents, where higher fitnesses equate to a higher chance to be selected
-                parent1 = self.pop.fitness_based_selection() if not user_tournament_selection else \
+                parent1 = self.pop.fitness_based_selection() if not use_tournament_selection else \
                           self.pop.tournament_selection()
 
-                parent2 = self.pop.fitness_based_selection() if not user_tournament_selection else \
+                parent2 = self.pop.fitness_based_selection() if not use_tournament_selection else \
                     self.pop.tournament_selection()
 
                 # Create n children per parent pair, to keep a stable population size. It won't always be the start size
@@ -89,7 +96,8 @@ class GeneticAlgorithm:
                                         (parent_pairs_per_gen * 2)))):
 
                     # Create child from two chosen snakes, using the chosen crossover method
-                    child_snake1, child_snake2 = parent1.single_point_crossover(parent2) \
+                    child_snake1, child_snake2 = \
+                        parent1.single_point_crossover(parent2) \
                         if not use_uniform_crossover \
                         else parent1.uniform_crossover(parent2)
 
@@ -118,10 +126,30 @@ class GeneticAlgorithm:
 
             # Save fit snake for testing
             if self.pop.highest_fitness > self.top_score:
-                with open("fittest_snake.pickle", "wb") as snake:
-                    pickle.dump(self.pop.population[self.pop.fittest_index], snake)
+                with open("fittest_snake_" + str(snakenum) + ".pickle", "wb") as snake:
+
+                    meta_info = {
+                        "snake_settings":
+                            "Population size: {}\n"
+                            "Parent pairs per generation: {}\n"
+                            "Keep per generation: {}\n"
+                            "Freaks per generation: {}\n"
+                            "Crossover method: {}\n"
+                            "Mutation chance: {}%\n"
+                                .format(population_size,
+                                        parent_pairs_per_gen,
+                                        keep_per_gen,
+                                        freaks_per_gen,
+                                        "Uniform" if use_uniform_crossover else "Single-Point",
+                                        mutation_chance_percentage),
+                        "n_fruits": spawn_n_fruits,
+                        "snake": self.pop.population[self.pop.fittest_index][0],
+                        "score": self.pop.highest_fitness
+                    }
+
+                    pickle.dump(meta_info, snake)
                     self.top_score = self.pop.highest_fitness
-                    print("Saved snake!")
+                    print("Saved snake", str(snakenum) + "!")
 
             # Create a new population with the new and improved children of the old parents
             self.pop = Population(pop_size=0, existing_brains=new_pop)
@@ -137,7 +165,7 @@ class Population:
         # Populate population with new snek brains
         if not existing_brains:
             for _ in range(pop_size):
-                # Append a brain, and it's fitness. Fitnesses start at zero.
+                # Append a brain, and its fitness. Fitnesses start at zero.
                 # A pair of [SnakeBrain, Fitness] will be reffered to as 'snake'
                 self.population.append([SnakeBrain(), 0])
         # Reset the fitness of all the old snek brains, and add them to the population
@@ -157,9 +185,10 @@ class Population:
 
         for i, snake in enumerate(self.population):
             # Returns the score of the brains game
-            score, age = snake[0].play(graphical=show_graphics, delay=delay, fruits=spawn_fruits)
+            score, age = snake[0].play(graphical=show_graphics, delay=delay, fruits=spawn_n_fruits)
             # The main fitness function
-            fitness = age * 2**score
+            fitness = age * (2**score)
+
             self.population[i][1] = fitness  # Update the brains fitness in the population list
 
     def calc_fittest_score(self):
